@@ -1,0 +1,183 @@
+<div class="app-shell" [class.mega-theme]="selected==='MEGA_SENA'" [class.lotofacil-theme]="selected==='LOTOFACIL'">
+  <aside class="sidebar">
+    <div class="brand" (click)="navigate('dashboard')">
+      <div class="brand-mark">☘</div>
+      <div><strong>SorteLoto</strong><small>Analytics v2.0</small></div>
+    </div>
+
+    <nav class="main-nav">
+      <button [class.active]="view==='dashboard'" (click)="navigate('dashboard')"><span>⌂</span> Dashboard</button>
+      <button [class.active]="view==='generator'" (click)="navigate('generator')"><span>✦</span> Gerador</button>
+      <button [class.active]="view==='history'" (click)="navigate('history')"><span>▤</span> Concursos</button>
+      <button *ngIf="auth" [class.active]="view==='games'" (click)="navigate('games')"><span>★</span> Meus jogos</button>
+      <button [class.active]="view==='lab'" (click)="navigate('lab')"><span>⌁</span> Laboratório</button>
+      <button *ngIf="auth" [class.active]="view==='profile'" (click)="navigate('profile')"><span>◉</span> Perfil</button>
+      <button *ngIf="isAdmin" [class.active]="view==='admin'" (click)="navigate('admin')"><span>⚙</span> Administração</button>
+    </nav>
+
+    <div class="sidebar-status">
+      <span class="status-dot" [class.ok]="syncStatus?.upToDate"></span>
+      <div><strong>{{dbHealth}}</strong><small>{{syncStatus?.contestsInDatabase || 0}} concursos locais</small></div>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div class="mobile-brand"><b>☘ SorteLoto</b></div>
+      <div class="lottery-switch">
+        <button class="mega-option" [class.active]="selected==='MEGA_SENA'" (click)="select('MEGA_SENA')">Mega-Sena</button>
+        <button class="loto-option" [class.active]="selected==='LOTOFACIL'" (click)="select('LOTOFACIL')">Lotofácil</button>
+      </div>
+      <div class="account-pill" *ngIf="auth; else guestTop">
+        <div class="avatar">{{auth.name.charAt(0).toUpperCase()}}</div>
+        <div><strong>{{auth.name}}</strong><small>{{auth.role}}</small></div>
+        <button class="ghost small-btn" (click)="logout()">Sair</button>
+      </div>
+      <ng-template #guestTop><button class="primary small-btn" (click)="navigate('profile')">Entrar</button></ng-template>
+    </header>
+
+    <main class="main-content">
+      <p class="error toast" *ngIf="error">{{error}}</p>
+      <p class="success toast" *ngIf="message">{{message}}</p>
+
+      <!-- DASHBOARD -->
+      <ng-container *ngIf="view==='dashboard'">
+        <section class="page-heading">
+          <div><span class="eyebrow">VISÃO GERAL</span><h1>Dashboard {{label(selected)}}</h1><p>Dados locais, estatísticas e atalhos em uma única visão.</p></div>
+          <button class="primary" (click)="navigate('generator')">✦ Gerar novo jogo</button>
+        </section>
+
+        <section class="kpi-grid">
+          <article class="kpi"><span>Base local</span><strong>{{syncStatus?.contestsInDatabase || 0}}</strong><small>concursos armazenados</small></article>
+          <article class="kpi"><span>Último concurso</span><strong>{{syncStatus?.databaseLatestContest ? '#'+syncStatus?.databaseLatestContest : '—'}}</strong><small>{{syncStatus?.databaseLatestDrawDate ? (syncStatus?.databaseLatestDrawDate|date:'dd/MM/yyyy') : 'aguardando dados'}}</small></article>
+          <article class="kpi"><span>Sincronização</span><strong class="health" [class.good]="syncStatus?.upToDate">{{dbHealth}}</strong><small>{{syncStatus?.missingContests || 0}} pendência(s)</small></article>
+          <article class="kpi"><span>Seus jogos</span><strong>{{profile?.savedGames || 0}}</strong><small>{{profile?.favorites || 0}} favorito(s)</small></article>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="panel span-2" *ngIf="stats">
+            <div class="panel-head"><div><span class="eyebrow">ESTATÍSTICAS</span><h2>{{stats.contestsAnalyzed}} concursos analisados</h2></div><button class="ghost" (click)="navigate('lab')">Abrir laboratório</button></div>
+            <p class="demo-warning" *ngIf="stats.dataSource==='DEMO_SIMULADO'">⚠ Modo demonstração. Sincronize concursos para usar dados armazenados.</p>
+            <app-stats-chart [stats]="stats"></app-stats-chart>
+          </article>
+
+          <article class="panel latest-card">
+            <span class="eyebrow">MAIS RECENTE NO BANCO</span>
+            <h2 *ngIf="latestHistory; else noLatest">Concurso #{{latestHistory.contestNumber}}</h2>
+            <ng-template #noLatest><h2>Sem concursos</h2></ng-template>
+            <p *ngIf="latestHistory">{{latestHistory.drawDate|date:'dd/MM/yyyy'}}</p>
+            <div class="mini draw-balls" *ngIf="latestHistory">
+              <span [class.mega-mini]="selected==='MEGA_SENA'" [class.loto-mini]="selected==='LOTOFACIL'" *ngFor="let n of latestHistory.numbers">{{n|number:'2.0-0'}}</span>
+            </div>
+            <button class="ghost full" (click)="navigate('history')">Ver histórico completo</button>
+          </article>
+        </section>
+
+        <section class="triple-stats" *ngIf="stats">
+          <article class="panel"><h3>🔥 Mais frequentes</h3><div class="chips"><span *ngFor="let x of stats.hottest.slice(0,6)">{{x.number}} <small>{{x.frequency}}x</small></span></div></article>
+          <article class="panel"><h3>⏳ Mais atrasados</h3><div class="chips"><span *ngFor="let x of stats.mostDelayed.slice(0,6)">{{x.number}} <small>{{x.delay}}</small></span></div></article>
+          <article class="panel"><h3>❄ Menos frequentes</h3><div class="chips"><span *ngFor="let x of stats.coldest.slice(0,6)">{{x.number}} <small>{{x.frequency}}x</small></span></div></article>
+        </section>
+      </ng-container>
+
+      <!-- GENERATOR -->
+      <ng-container *ngIf="view==='generator'">
+        <section class="page-heading"><div><span class="eyebrow">GERADOR</span><h1>Gerar {{label(selected)}}</h1><p>Crie uma combinação e veja uma leitura estatística da distribuição.</p></div></section>
+        <section class="panel generator-hero">
+          <div class="generator-copy"><span class="generator-icon">✦</span><h2>Nova combinação</h2><p>O SmartScore descreve equilíbrio estatístico. Ele não prevê sorteios nem aumenta a chance matemática de premiação.</p></div>
+          <button class="primary jumbo" (click)="generate()" [disabled]="loading">{{loading?'Gerando...':'Gerar jogo'}}</button>
+        </section>
+
+        <section class="panel" *ngIf="currentGame">
+          <div class="panel-head"><div><span class="eyebrow">COMBINAÇÃO</span><h2>{{label(currentGame.lotteryType)}}</h2></div><button *ngIf="auth" class="ghost" (click)="saveCurrent()">☆ Salvar jogo</button></div>
+          <div class="balls large-balls"><span class="ball" [class.mega-ball]="currentGame.lotteryType==='MEGA_SENA'" [class.loto-ball]="currentGame.lotteryType==='LOTOFACIL'" *ngFor="let n of currentGame.numbers">{{n|number:'2.0-0'}}</span></div>
+        </section>
+
+        <section class="panel" *ngIf="analysis">
+          <div class="scoreline"><div><span class="eyebrow">SMARTSCORE</span><h2>{{analysis.classification}}</h2><p>{{analysis.message}}</p></div><strong>{{analysis.balanceScore}}<small>/100</small></strong></div>
+          <div class="metric-grid"><div><b>{{analysis.evenCount}}</b><span>Pares</span></div><div><b>{{analysis.oddCount}}</b><span>Ímpares</span></div><div><b>{{analysis.sum}}</b><span>Soma</span></div><div><b>{{analysis.consecutivePairs}}</b><span>Sequências</span></div></div>
+        </section>
+      </ng-container>
+
+      <!-- HISTORY -->
+      <ng-container *ngIf="view==='history'">
+        <section class="page-heading"><div><span class="eyebrow">BANCO DE RESULTADOS</span><h1>Histórico de concursos</h1><p>Consulte os resultados que já foram sincronizados para o PostgreSQL.</p></div></section>
+        <section class="panel search-panel">
+          <div><h3>Buscar concurso específico</h3><p>Digite o número do concurso de {{label(selected)}}.</p></div>
+          <div class="search-box"><input type="number" min="1" [(ngModel)]="historySearch" placeholder="Ex.: 2900" (keyup.enter)="searchContest()"><button class="primary" (click)="searchContest()">Buscar</button></div>
+        </section>
+
+        <section class="panel featured-draw" *ngIf="historyFound">
+          <div><span class="eyebrow">RESULTADO ENCONTRADO</span><h2>Concurso #{{historyFound.contestNumber}}</h2><p>{{historyFound.drawDate|date:'dd/MM/yyyy'}}</p></div>
+          <div class="mini draw-balls"><span [class.mega-mini]="selected==='MEGA_SENA'" [class.loto-mini]="selected==='LOTOFACIL'" *ngFor="let n of historyFound.numbers">{{n|number:'2.0-0'}}</span></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><span class="eyebrow">ÚLTIMOS CONCURSOS</span><h2>{{history?.total || 0}} no banco</h2></div><span class="muted" *ngIf="historyLoading">Carregando...</span></div>
+          <div class="draw-table" *ngIf="history?.items?.length; else emptyHistory">
+            <div class="draw-row" *ngFor="let d of history?.items">
+              <div class="draw-meta"><strong>#{{d.contestNumber}}</strong><small>{{d.drawDate|date:'dd/MM/yyyy'}}</small></div>
+              <div class="mini"><span [class.mega-mini]="d.lotteryType==='MEGA_SENA'" [class.loto-mini]="d.lotteryType==='LOTOFACIL'" *ngFor="let n of d.numbers">{{n|number:'2.0-0'}}</span></div>
+            </div>
+          </div>
+          <ng-template #emptyHistory><p class="empty-state">Nenhum concurso armazenado. Um administrador pode sincronizar a base.</p></ng-template>
+          <div class="pagination" *ngIf="history && history.totalPages>1"><button class="ghost" (click)="previousHistory()" [disabled]="historyPage===0">← Anterior</button><span>Página {{historyPage+1}} de {{history.totalPages}}</span><button class="ghost" (click)="nextHistory()" [disabled]="historyPage+1>=history.totalPages">Próxima →</button></div>
+        </section>
+      </ng-container>
+
+      <!-- MY GAMES -->
+      <ng-container *ngIf="view==='games' && auth">
+        <section class="page-heading"><div><span class="eyebrow">BIBLIOTECA PESSOAL</span><h1>Meus jogos</h1><p>Organize, favorite, confira e compare suas combinações salvas.</p></div><button class="primary" (click)="navigate('generator')">+ Novo jogo</button></section>
+        <div class="filter-tabs"><button [class.active]="savedFilter==='ALL'" (click)="savedFilter='ALL'">Todos</button><button [class.active]="savedFilter==='MEGA_SENA'" (click)="savedFilter='MEGA_SENA'">Mega-Sena</button><button [class.active]="savedFilter==='LOTOFACIL'" (click)="savedFilter='LOTOFACIL'">Lotofácil</button><button [class.active]="savedFilter==='FAVORITES'" (click)="savedFilter='FAVORITES'">★ Favoritos</button></div>
+        <section class="game-library">
+          <article class="saved-card" *ngFor="let g of filteredSavedGames">
+            <div class="saved-card-head"><div><strong>{{label(g.lotteryType)}}</strong><small>{{g.createdAt|date:'dd/MM/yyyy HH:mm'}}</small></div><button class="icon-btn" (click)="toggleFavorite(g)">{{g.favorite?'★':'☆'}}</button></div>
+            <div class="mini saved-balls"><span [class.mega-mini]="g.lotteryType==='MEGA_SENA'" [class.loto-mini]="g.lotteryType==='LOTOFACIL'" *ngFor="let n of g.numbers">{{n}}</span></div>
+            <div class="saved-actions"><button class="ghost" (click)="check(g)">Conferir</button><button class="danger-btn" (click)="deleteGame(g)">Excluir</button></div>
+            <div class="check-result" *ngIf="checks[g.id]">Concurso #{{checks[g.id].contestNumber}} · <b>{{checks[g.id].hits}} acerto(s)</b><span *ngIf="checks[g.id].matchedNumbers.length"> · {{checks[g.id].matchedNumbers.join(', ')}}</span></div>
+          </article>
+          <p class="empty-state panel" *ngIf="!filteredSavedGames.length">Nenhum jogo neste filtro.</p>
+        </section>
+
+        <section class="panel" *ngIf="ranking.length"><span class="eyebrow">RANKING SMARTSCORE</span><h2>Melhores combinações salvas</h2><div class="ranking-row" *ngFor="let g of ranking.slice(0,8); let i=index"><strong>#{{i+1}}</strong><div class="mini"><span [class.mega-mini]="g.lotteryType==='MEGA_SENA'" [class.loto-mini]="g.lotteryType==='LOTOFACIL'" *ngFor="let n of g.numbers">{{n}}</span></div><div class="rank-score">{{g.smartScore}}<small>{{g.classification}}</small></div></div></section>
+      </ng-container>
+
+      <!-- LAB -->
+      <ng-container *ngIf="view==='lab'">
+        <section class="page-heading"><div><span class="eyebrow">ANÁLISE EXPLORATÓRIA</span><h1>Laboratório estatístico</h1><p>Explore frequências e backtests sem tratar comportamento histórico como previsão.</p></div><button class="primary" (click)="runAnalytics()" [disabled]="analyticsLoading">{{analyticsLoading?'Calculando...':'Executar backtest'}}</button></section>
+        <section class="panel" *ngIf="stats"><app-stats-chart [stats]="stats"></app-stats-chart><div class="triple-stats compact-triple"><div><h3>🔥 Frequentes</h3><div class="chips"><span *ngFor="let x of stats.hottest">{{x.number}} <small>{{x.frequency}}x</small></span></div></div><div><h3>⏳ Atrasados</h3><div class="chips"><span *ngFor="let x of stats.mostDelayed">{{x.number}} <small>{{x.delay}}</small></span></div></div><div><h3>❄ Menos frequentes</h3><div class="chips"><span *ngFor="let x of stats.coldest">{{x.number}} <small>{{x.frequency}}x</small></span></div></div></div></section>
+        <section class="compare-grid" *ngIf="comparison"><article class="strategy-card panel"><span>SorteLoto</span><strong>{{comparison.smartAverageHits}}</strong><small>média de acertos</small><em>Melhor: {{comparison.smartBestHits}}</em></article><article class="strategy-card panel"><span>Aleatório</span><strong>{{comparison.randomAverageHits}}</strong><small>média de acertos</small><em>Melhor: {{comparison.randomBestHits}}</em></article><article class="strategy-card panel verdict"><span>Diferença observada</span><strong>{{comparison.smartAdvantage}}</strong><small>vantagem média no teste</small><em>{{comparison.verdict}}</em></article></section>
+        <section class="panel disclaimer"><b>Nota metodológica</b><p>Resultados passados e backtests não alteram as probabilidades fundamentais de um sorteio futuro. O laboratório é educacional e exploratório.</p></section>
+      </ng-container>
+
+      <!-- PROFILE / LOGIN -->
+      <ng-container *ngIf="view==='profile'">
+        <section class="page-heading"><div><span class="eyebrow">CONTA</span><h1>{{auth?'Seu perfil':'Entrar no SorteLoto'}}</h1><p>{{auth?'Dados e visão geral da sua conta.':'Acesse seus jogos, favoritos e recursos pessoais.'}}</p></div></section>
+        <section class="auth-layout" *ngIf="!auth; else profileView">
+          <article class="panel auth-card">
+            <div class="auth-tabs"><button [class.active]="authMode==='login'" (click)="authMode='login'">Entrar</button><button [class.active]="authMode==='register'" (click)="authMode='register'">Criar conta</button></div>
+            <input *ngIf="authMode==='register'" [(ngModel)]="name" placeholder="Seu nome"><input [(ngModel)]="email" type="email" placeholder="E-mail"><input [(ngModel)]="password" type="password" placeholder="Senha (mínimo 8 caracteres)"><button class="primary full" (click)="submitAuth()">{{authMode==='login'?'Entrar':'Cadastrar'}}</button>
+            <div class="divider" *ngIf="googleEnabled"><span>ou</span></div><div id="googleSignIn" class="google-host" *ngIf="googleEnabled"></div><p class="muted google-note" *ngIf="!googleEnabled">Login Google disponível após configurar o GOOGLE_CLIENT_ID.</p>
+          </article>
+          <article class="auth-feature"><span>☘</span><h2>Sua área pessoal</h2><p>Salve combinações, marque favoritas e confira seus jogos contra o resultado mais recente armazenado.</p></article>
+        </section>
+        <ng-template #profileView><section class="profile-hero panel" *ngIf="profile"><div class="profile-avatar">{{profile.name.charAt(0).toUpperCase()}}</div><div><span class="eyebrow">{{profile.role}}</span><h2>{{profile.name}}</h2><p>{{profile.email}}</p></div></section><section class="kpi-grid profile-kpis" *ngIf="profile"><article class="kpi"><span>Jogos salvos</span><strong>{{profile.savedGames}}</strong><small>na biblioteca</small></article><article class="kpi"><span>Favoritos</span><strong>{{profile.favorites}}</strong><small>combinações marcadas</small></article><article class="kpi"><span>Acesso</span><strong>{{profile.role}}</strong><small>nível da conta</small></article><article class="kpi"><span>Base atual</span><strong>{{syncStatus?.contestsInDatabase || 0}}</strong><small>{{label(selected)}}</small></article></section></ng-template>
+      </ng-container>
+
+      <!-- ADMIN -->
+      <ng-container *ngIf="view==='admin' && isAdmin">
+        <section class="page-heading"><div><span class="eyebrow">OPERAÇÃO</span><h1>Administração</h1><p>Saúde da base, sincronização e importação dos concursos.</p></div><button class="primary" (click)="syncNow()" [disabled]="importLoading">{{importLoading?'Sincronizando...':'↻ Sincronizar agora'}}</button></section>
+        <section class="sync-status-grid" *ngIf="syncStatus"><article class="sync-card" [class.sync-ok]="syncStatus.upToDate"><span>Status</span><strong>{{syncStatus.status==='ATUALIZADO'?'✓ Dados atualizados':syncStatus.status==='PENDENTE'?'⚠ Pendente':syncStatus.status==='FONTE_INDISPONIVEL'?'✕ Fonte indisponível':'○ Nunca sincronizado'}}</strong><small>{{syncStatus.message}}</small></article><article class="sync-card"><span>Último no banco</span><strong>{{syncStatus.databaseLatestContest ? '#'+syncStatus.databaseLatestContest : '—'}}</strong><small>{{syncStatus.databaseLatestDrawDate ? (syncStatus.databaseLatestDrawDate|date:'dd/MM/yyyy') : 'Nenhum'}}</small></article><article class="sync-card"><span>Último da fonte</span><strong>{{syncStatus.sourceLatestContest ? '#'+syncStatus.sourceLatestContest : '—'}}</strong><small>{{syncStatus.sourceReachable?'Fonte respondeu':'Sem confirmação'}}</small></article><article class="sync-card"><span>Base</span><strong>{{syncStatus.contestsInDatabase}}</strong><small>{{syncStatus.missingContests}} pendente(s)</small></article></section>
+        <section class="panel"><div class="sync-meta" *ngIf="syncStatus"><span>Última tentativa: <b>{{syncStatus.lastAttemptAt ? (syncStatus.lastAttemptAt|date:'dd/MM/yyyy HH:mm:ss') : 'nunca'}}</b></span><span>Último sucesso: <b>{{syncStatus.lastSuccessAt ? (syncStatus.lastSuccessAt|date:'dd/MM/yyyy HH:mm:ss') : 'nunca'}}</b></span></div><details class="advanced-import"><summary>Importação manual avançada</summary><div class="admin-actions"><input type="number" min="1" max="1000" [(ngModel)]="importQuantity"><button class="ghost" (click)="importOfficial(false)" [disabled]="importLoading">Importar últimos</button><button class="ghost" (click)="importOfficial(true)" [disabled]="importLoading">Buscar faltantes</button></div></details><p class="muted" *ngIf="lastImport">Novos: {{lastImport.imported}} · Existentes: {{lastImport.skipped}} · Falhas: {{lastImport.failed}} · Banco: {{lastImport.databaseLatestContest || '—'}}</p></section>
+      </ng-container>
+    </main>
+
+    <nav class="mobile-nav">
+      <button [class.active]="view==='dashboard'" (click)="navigate('dashboard')">⌂<small>Início</small></button>
+      <button [class.active]="view==='generator'" (click)="navigate('generator')">✦<small>Gerar</small></button>
+      <button [class.active]="view==='history'" (click)="navigate('history')">▤<small>Concursos</small></button>
+      <button [class.active]="view==='games'" (click)="auth?navigate('games'):navigate('profile')">★<small>Jogos</small></button>
+      <button [class.active]="view==='profile'" (click)="navigate('profile')">◉<small>Perfil</small></button>
+    </nav>
+  </div>
+</div>

@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartloto-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartloto}
+      POSTGRES_USER: ${POSTGRES_USER:-smartloto}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+    volumes:
+      - smartloto_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smartloto} -d ${POSTGRES_DB:-smartloto}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    container_name: smartloto-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-smartloto}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-smartloto}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+      SMARTLOTO_JWT_SECRET: ${SMARTLOTO_JWT_SECRET:?Defina SMARTLOTO_JWT_SECRET no arquivo .env}
+      SMARTLOTO_JWT_EXPIRATION_MINUTES: ${SMARTLOTO_JWT_EXPIRATION_MINUTES:-120}
+      SMARTLOTO_ADMIN_ENABLED: ${SMARTLOTO_ADMIN_ENABLED:-false}
+      SMARTLOTO_ADMIN_EMAIL: ${SMARTLOTO_ADMIN_EMAIL:-admin@smartloto.local}
+      SMARTLOTO_ADMIN_PASSWORD: ${SMARTLOTO_ADMIN_PASSWORD:-}
+      SMARTLOTO_ADMIN_SYNC_ON_START: ${SMARTLOTO_ADMIN_SYNC_ON_START:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: smartloto-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8088:80"
+
+volumes:
+  smartloto_data:

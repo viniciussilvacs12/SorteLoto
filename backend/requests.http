@@ -1,0 +1,92 @@
+### Gerar Mega-Sena
+GET http://localhost:8080/api/games/mega-sena
+
+### Gerar Lotofácil
+GET http://localhost:8080/api/games/lotofacil
+
+### Histórico
+GET http://localhost:8080/api/games/history
+
+### Analisar jogo
+POST http://localhost:8080/api/analysis
+Content-Type: application/json
+
+{
+  "lotteryType": "MEGA_SENA",
+  "numbers": [4, 12, 23, 34, 47, 59]
+}
+
+
+### Importar últimos 200 concursos oficiais Mega-Sena
+POST http://localhost:8080/api/import/MEGA_SENA?quantity=200
+
+### Importar últimos 200 concursos oficiais Lotofácil
+POST http://localhost:8080/api/import/LOTOFACIL?quantity=200
+
+### Estatísticas reais Mega-Sena
+GET http://localhost:8080/api/stats/MEGA_SENA
+
+### Gerador Smart - testa 1000 candidatos
+GET http://localhost:8080/api/smart-generator/MEGA_SENA?candidates=1000
+
+
+### SmartScore 2.0
+POST http://localhost:8080/api/smart-analysis
+Content-Type: application/json
+
+{
+  "lotteryType": "MEGA_SENA",
+  "numbers": [4, 12, 23, 34, 47, 59]
+}
+
+### Backtest últimos 30 concursos usando 200 candidatos por teste
+GET http://localhost:8080/api/backtest/MEGA_SENA?tests=30&candidates=200
+
+### Backtest Lotofácil
+GET http://localhost:8080/api/backtest/LOTOFACIL?tests=30&candidates=200
+
+
+### Comparar SmartLoto vs Aleatório
+GET http://localhost:8080/api/strategy-comparison/MEGA_SENA?tests=30&candidates=200
+
+
+### Cadastro
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "name":"Vinicius",
+  "email":"vinicius@example.com",
+  "password":"senha-de-exemplo"
+}
+
+### Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email":"vinicius@example.com",
+  "password":"senha-de-exemplo"
+}
+
+
+### LOGIN ADMIN (habilite e defina a senha no .env)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email":"admin@smartloto.local",
+  "password":"SENHA_DEFINIDA_NO_ENV"
+}
+
+### PERFIL (substitua TOKEN)
+GET http://localhost:8080/api/profile/me
+Authorization: Bearer TOKEN
+
+### IMPORT ADMIN (substitua TOKEN)
+POST http://localhost:8080/api/import/MEGA_SENA?quantity=200
+Authorization: Bearer TOKEN
+
+### RANKING (substitua TOKEN)
+GET http://localhost:8080/api/saved-games/ranking
+Authorization: Bearer TOKEN

@@ -1,0 +1,9 @@
+{
+  "name": "SorteLoto Analytics",
+  "short_name": "SorteLoto",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07100b",
+  "theme_color": "#00ab67",
+  "description": "Dashboard estatístico educacional para loterias."
+}
